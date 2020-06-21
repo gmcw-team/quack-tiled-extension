@@ -25,9 +25,9 @@ function checkSetFormat(map) {
   if (map.orientation != TileMap.Orthogonal) {
     errs += "Map orientation is not orthogonal!\n";
   }
-  if (map.layerDataFormat != TileMap.Base64Zlib) {
-    errs += "Map data format is not Base64Zlib!\n";
-  }
+  // if (map.layerDataFormat != TileMap.Base64Zlib) {
+  //   errs += "Map data format is not Base64Zlib!\n";
+  // }
   if (map.renderOrder != TileMap.RightDown) {
     errs += "Map render order is not Right Down!\n";
   }
@@ -38,6 +38,10 @@ function checkSetFormat(map) {
 // *** Push data to tiled online ***
 let pushAction = tiled.registerAction('PushToQuack', function(action) {
   const map = tiled.activeAsset;
+  if (!map.isTileMap) {
+    tiled.alert("Active document is not a TileMap! Please open or switch to a TileMap to sync.");
+    return;
+  }
 
   // make sure settings are correct
   const errs = checkSetFormat(map);
@@ -45,6 +49,25 @@ let pushAction = tiled.registerAction('PushToQuack', function(action) {
     tiled.allert("The following configuration were incorrect, please correct them and try again\n\n"+errs);
     return;
   }
+
+  // check and set API secret key
+  let apiSecret = map.property("Quack Secret Key");
+  if (!apiSecret) {
+    apiSecret = tiled.prompt("Please enter your Quack secret key from https://quack.games",
+    "",
+    "Please enter your secret key"
+    );
+
+    if (!apiSecret) {
+      tiled.alert("No key entered, aborting sync");
+      return;
+    }
+
+    map.setProperty("Quack Secret Key", apiSecret);
+  }
+
+
+
 });
 pushAction.text = "Push To Quack";
 pushAction.icon = "quack_icon_32.png";
@@ -63,7 +86,7 @@ let syncAction = tiled.registerAction('SyncTilemaps', function(action) {
   const errs = checkSetFormat(map);
   if (errs) {
     map.orientation = TileMap.Orthogonal;
-    map.layerDataFormat = TileMap.Base64Zlib;
+    // map.layerDataFormat = TileMap.Base64Zlib;
     map.renderOrder = TileMap.RightDown;
     tiled.allert("The following configuration was incorrect, they have been automatically corrected:\n\n"+errs);
   }
@@ -188,7 +211,7 @@ let syncAction = tiled.registerAction('SyncTilemaps', function(action) {
   }
 
   const invalid_objects = getLayerObjects(map, yypObjects);
-  if (invalid_objects) {
+  if (invalid_objects.length) {
     tiled.alert(
       "Warning, the following objects have names that don't match the objects in your GM project\n\n" +
       invalid_objects.join("\n") + "\n\n" +
