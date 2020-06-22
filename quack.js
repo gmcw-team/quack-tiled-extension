@@ -6,6 +6,7 @@ function yyRead(path) {
     yyFile = new TextFile(path);
   } catch (error) {
     tiled.alert("Could not read file, please check the 'GMS2 Project' property points to a valid GMS2 project\n\n" + path);
+    tiled.error(error, ()=>{});
     return;
   }
 
@@ -13,6 +14,7 @@ function yyRead(path) {
   const yy = JSON.parse(yyStr);
   if (typeof yy !== 'object') {
     tiled.alert("Could not parse YY, please check the 'GMS2 Project' property points to a valid GMS2 project\n\n" + path);
+    tiled.error(error, ()=>{});
     return;
   }
 
@@ -25,9 +27,9 @@ function checkSetFormat(map) {
   if (map.orientation != TileMap.Orthogonal) {
     errs += "Map orientation is not orthogonal!\n";
   }
-  // if (map.layerDataFormat != TileMap.Base64Zlib) {
-  //   errs += "Map data format is not Base64Zlib!\n";
-  // }
+  if (map.layerDataFormat != TileMap.Base64Zlib) {
+    errs += "Map data format is not Base64Zlib!\n";
+  }
   if (map.renderOrder != TileMap.RightDown) {
     errs += "Map render order is not Right Down!\n";
   }
@@ -43,10 +45,24 @@ let pushAction = tiled.registerAction('PushToQuack', function(action) {
     return;
   }
 
+  if (map.modified) {
+    tiled.alert("Document was modified! Please save before pushing.");
+    return;
+  }
+
   // make sure settings are correct
   const errs = checkSetFormat(map);
   if (errs) {
-    tiled.allert("The following configuration were incorrect, please correct them and try again\n\n"+errs);
+    tiled.alert("The following configuration were incorrect, please correct them and try again\n\n"+errs);
+    return;
+  }
+
+  // make sure none of the tilesets are loaded in externally
+  let externals = map.tilesets.filter(tileset => tileset.fileName).map(tileset => tileset.name);
+  if (externals.length) {
+    tiled.alert(
+      "The following Tilesets use external files, this is not supported currently, please embed them in this map\n\n" +
+      externals.join("\n"));
     return;
   }
 
@@ -66,7 +82,35 @@ let pushAction = tiled.registerAction('PushToQuack', function(action) {
     map.setProperty("Quack Secret Key", apiSecret);
   }
 
+  // interpret API key for user and game
 
+
+  // get file
+  // try {
+  //   tmxFile = new TextFile(map.fileName);
+  // } catch (error) {
+  //   tiled.alert("Could not read project");
+  //   tiled.error(error, ()=>{});
+  //   return;
+  // }
+  //
+  // const tmxStr = yyFile.readAll();
+  //
+  // var doc = new XMLHttpRequest();
+  // doc.setRequestHeader("Content-Type", "application/xml; charset=\"utf-8\"");
+  // doc.onreadystatechange = function() {
+  //   if (doc.readyState == XMLHttpRequest.DONE) {
+  //     if (doc.status === 200) {
+  //       tiled.alert("Push complete");
+  //     }
+  //     else {
+  //       tiled.alert("Push failed with status code " + doc.status);
+  //       tiled.error(doc.response, ()=>{});
+  //     }
+  //   }
+  // }
+  // doc.open("POST", "http://");
+  // doc.send(tmxStr);
 
 });
 pushAction.text = "Push To Quack";
@@ -86,7 +130,7 @@ let syncAction = tiled.registerAction('SyncTilemaps', function(action) {
   const errs = checkSetFormat(map);
   if (errs) {
     map.orientation = TileMap.Orthogonal;
-    // map.layerDataFormat = TileMap.Base64Zlib;
+    map.layerDataFormat = TileMap.Base64Zlib;
     map.renderOrder = TileMap.RightDown;
     tiled.allert("The following configuration was incorrect, they have been automatically corrected:\n\n"+errs);
   }
@@ -256,15 +300,3 @@ function updateMenu(asset) {
 updateMenu(tiled.activeAsset);
 tiled.activeAssetChanged.connect(updateMenu);
 
-
-// var doc = new XMLHttpRequest();
-// doc.onreadystatechange = function() {
-//   if (doc.readyState == XMLHttpRequest.DONE) {
-//     var a = doc.response;
-//
-//     tiled.alert(a);
-//   }
-// }
-//
-// doc.open("GET", "http://worldtimeapi.org/api/ip");
-// doc.send();
