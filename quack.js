@@ -83,34 +83,40 @@ let pushAction = tiled.registerAction('PushToQuack', function(action) {
   }
 
   // interpret API key for user and game
+  const [temp, user, game, token] = apiSecret.split(":", 4);
+  const tilemapName = FileInfo.baseName(map.fileName);
 
+  try {
+    tmxFile = new TextFile(map.fileName);
+  } catch (error) {
+    tiled.alert("Could not read project");
+    tiled.error(error, ()=>{});
+    return;
+  }
 
-  // get file
-  // try {
-  //   tmxFile = new TextFile(map.fileName);
-  // } catch (error) {
-  //   tiled.alert("Could not read project");
-  //   tiled.error(error, ()=>{});
-  //   return;
-  // }
-  //
-  // const tmxStr = yyFile.readAll();
-  //
-  // var doc = new XMLHttpRequest();
-  // doc.setRequestHeader("Content-Type", "application/xml; charset=\"utf-8\"");
-  // doc.onreadystatechange = function() {
-  //   if (doc.readyState == XMLHttpRequest.DONE) {
-  //     if (doc.status === 200) {
-  //       tiled.alert("Push complete");
-  //     }
-  //     else {
-  //       tiled.alert("Push failed with status code " + doc.status);
-  //       tiled.error(doc.response, ()=>{});
-  //     }
-  //   }
-  // }
-  // doc.open("POST", "http://");
-  // doc.send(tmxStr);
+  const tmxStr = tmxFile.readAll();
+
+  var doc = new XMLHttpRequest();
+  doc.onreadystatechange = function() {
+    if (doc.readyState == XMLHttpRequest.DONE) {
+      if (doc.status === 200) {
+        tiled.error(doc.response, ()=>{});
+        tiled.alert("Push complete");
+      }
+      else if (doc.status === 403) {
+        tiled.error(doc.response, ()=>{});
+        tiled.alert("Push failed, please check your Quack Secret key from https://quack.games");
+      }
+      else {
+        tiled.error(doc.response, ()=>{});
+        tiled.alert("Push failed with status code " + doc.status);
+      }
+    }
+  }
+  doc.open("PUT", `http://localhost:5000/api/quack/users/${user}/games/${game}/tilemaps/${tilemapName}`);
+  doc.setRequestHeader("Content-Type", "application/xml");
+  doc.setRequestHeader("Authorization", `Basic ${apiSecret}`);
+  doc.send(tmxStr);
 
 });
 pushAction.text = "Push To Quack";
